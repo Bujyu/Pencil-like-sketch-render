@@ -3,23 +3,12 @@
  NPAR 2012
 */
 
-#include <vector>
-#include <string>
 #include <iostream>
 
-#define _USE_MATH_DEFINES 
-#include <cmath>
+#include "renderPencil.hpp"
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/objdetect/objdetect.hpp>
+void renderPencil::stroke_generate( cv::Mat& dst, cv::Mat& src ){
 
-int tex_id;
-
-cv::Mat stroke_generate( cv::Mat &src ){
-
-    cv::Mat dst;
     cv::Mat gImage;
     cv::Mat gradient_x, gradient_y;
     cv::Mat kernel;
@@ -97,22 +86,22 @@ cv::Mat stroke_generate( cv::Mat &src ){
     // Invert color
     cv::bitwise_not( dst, dst );
 
-    return dst;
+    // return dst by reference
 
 }
 
-cv::Mat tone_generate( cv::Mat src ){
+void renderPencil::tone_generate( cv::Mat& dst, cv::Mat& src ){
 
-    cv::Mat dst;
     cv::Mat gImage;
     
     // Convert to grayscale
     cv::GaussianBlur( src, gImage, cv::Size( 5, 5 ), 0, 0 );
-    cv::cvtColor( gImage, dst, CV_BGR2GRAY );
+    cv::cvtColor( gImage, gImage, CV_BGR2GRAY );
 
     // Tone adjusted
     std::cout << "Tone adjusted" << std::endl;
-    std::vector<double> p( 256 );
+    //std::vector<double> p( 256 );
+    double p[256] = { 0.0 };
     double sum = 0.0;
     for( int i = 0 ; i <= 255 ; i++ ){
         double p1 = 0.0, p2 = 0.0, p3 = 0.0;
@@ -139,12 +128,12 @@ cv::Mat tone_generate( cv::Mat src ){
         p[i] = p[i]*(1.0/sum) + p[i-1];
 
     // Histogram matching   
-    for( int i = 0 ; i < dst.size().height ; ++i )
-        for( int j = 0 ; j < dst.size().width ; ++j )
-            dst.at<unsigned char>(i,j) =  static_cast<unsigned char>( p[dst.at<unsigned char>(i,j)]*255 );
+    for( int i = 0 ; i < gImage.size().height ; ++i )
+        for( int j = 0 ; j < gImage.size().width ; ++j )
+            gImage.at<unsigned char>(i,j) =  static_cast<unsigned char>( p[gImage.at<unsigned char>(i,j)]*255 );
 
     //cv::imshow( "ADJ TONE", dst );
-    dst.convertTo( dst, CV_32F );
+    gImage.convertTo( gImage, CV_32F );
 
     // Texture Rendering
     std::cout << "Texture Rendering" << std::endl;  
@@ -160,9 +149,9 @@ cv::Mat tone_generate( cv::Mat src ){
     cv::Mat beta = cv::Mat::zeros( src.size(), CV_32FC1 );
 
     for( int i = 0 ; i < src.size().height ; ++i ){
-        for( int j = 0 ; j < dst.size().width ; ++j ){
+        for( int j = 0 ; j < gImage.size().width ; ++j ){
             if( tex.at<float>(i,j) >= 0.01 )
-                beta.at<float>(i,j) = pow(log(dst.at<float>(i,j))/log(tex.at<float>(i,j)), 2.0);
+                beta.at<float>(i,j) = pow(log(gImage.at<float>(i,j))/log(tex.at<float>(i,j)), 2.0);
             else
                 beta.at<float>(i,j) = 0.0;
         }
@@ -177,72 +166,9 @@ cv::Mat tone_generate( cv::Mat src ){
     cv::magnitude( gradient_x, gradient_y, beta_grad );
 
     // Texture blur
-    cv::Mat tex_toon;
-    cv::multiply( beta+0.2*beta_grad, tex, tex_toon );
-
-    tex_toon.convertTo( tex_toon, CV_8U );
-    //cv::imshow( "TEX", tex_toon );
-
-    return tex_toon;
-
-}
-
-int main( int argc, char **argv ){
-    
-    cv::Mat src, dst;
-
-    // Image loading
-    if( argc < 3 ){
-        std::cerr << "<execution> <file name> <texture id>." << std::endl;
-        return -1;
-    }
-
-    src = cv::imread( argv[1] );
-    if( !src.data )
-        return -1;
-    
-    tex_id = atoi( argv[2] );
-
-    // CV_8UC1
-    cv::Mat stroke = stroke_generate( src );
-    cv::Mat tone = tone_generate( src );
-
-    //cv::namedWindow( "STROKE", CV_WINDOW_AUTOSIZE );
-    //cv::namedWindow( "TONE", CV_WINDOW_AUTOSIZE );
-    //cv::imshow( "STROKE", stroke );
-    //cv::imshow( "TONE", tone );
-    
-    stroke.convertTo( stroke, CV_32F, 1.0/255.0 );
-    tone.convertTo( tone, CV_32F );
-    
-    cv::multiply( stroke, tone, dst );
+    cv::multiply( beta+0.2*beta_grad, tex, dst );
 
     dst.convertTo( dst, CV_8U );
-
-    // Color pencil
-    std::cout << "Color Pencil" << std::endl;
-    cv::Mat hsv;
-    cv::cvtColor( src, hsv, CV_BGR2HSV );
-
-    cv::Mat hsvChannels[3];
-    cv::split( hsv, hsvChannels );
-    hsvChannels[2] = dst;
-    cv::merge( hsvChannels, 3, hsv );
-    cv::cvtColor( hsv, hsv, CV_HSV2BGR );
-
-    // Show the result
-    cv::namedWindow( "SRC", CV_WINDOW_AUTOSIZE );
-    cv::namedWindow( "DST", CV_WINDOW_AUTOSIZE );
-    cv::namedWindow( "COLOR", CV_WINDOW_AUTOSIZE );
-    //cv::namedWindow( "Merge", CV_WINDOW_AUTOSIZE );
-
-    cv::imshow( "SRC", src );
-    cv::imshow( "DST", dst );
-    cv::imshow( "COLOR", hsv );
-
-    cv::waitKey( -1 );
-    
-    return 0;
+    //cv::imshow( "TEX", tex_toon );
 
 }
-
