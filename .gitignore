@@ -1,0 +1,22 @@
+# Ignore all file and directory first
+*
+
+# Whitelist
+!.gitignore
+
+# Automatic build script
+![Mm]akefile
+
+# Directory
+!/data
+!/texture
+
+# Picture used to texture tone
+!*.png
+!*.jpg
+
+# Code
+!*.[ch]
+!*.cpp
+!*.hpp
+
