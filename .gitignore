@@ -3,6 +3,8 @@
 
 # Whitelist
 !.gitignore
+!LICENSE.md
+!README.md
 
 # Automatic build script
 ![Mm]akefile

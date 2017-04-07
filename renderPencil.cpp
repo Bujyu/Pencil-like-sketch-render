@@ -1,8 +1,3 @@
-/* 
- Based on Combining Sketch and Tone for Pencil Drawing
- NPAR 2012
-*/
-
 #include <iostream>
 
 #include "renderPencil.hpp"
